@@ -1,4 +1,8 @@
+import sys
+import getopt
 from tqdm import *
+
+
 def amls_round(stream):
     if len(stream) < 2:
         return []
@@ -18,11 +22,29 @@ def amls_round(stream):
                 res.append(str(p0))
             p0 = None
     return res + amls_round(sa) + amls_round(s1)
+argv = sys.argv[1:]
+inputfile = ''
+outputfile = ''
+k = 0
+opts, args = getopt.getopt(argv,"hi:o:",["ifile=","ofile=","sides="])
+for opt, arg in opts:
+    if opt == '-h':
+        print ('peres.py -i <inputfile> -o <outputfile> -s <number of faces in dice>')
+        sys.exit()
+    elif opt in ("-i", "--ifile"):
+        inputfile = arg
+    elif opt in ("-o", "--ofile"):
+        outputfile = arg
+    elif opt in ("-s", "--sides"):
+        k = int(arg)
 
-filename = input("File name: ")
-k = int(input("k: "))
+# filename = input("File name: ")
+# k = int(input("k: "))
+filename = inputfile
 file = open(filename, 'r')
-outputfilename = input("Output file name:")
+# outputfilename = input("Output file name:")
+outputfilename = outputfile
+
 bitstreams = {i:[] for i in range(1,k+1)}
 content = file.readlines()
 for i in tqdm(range(len(content[0]))):
