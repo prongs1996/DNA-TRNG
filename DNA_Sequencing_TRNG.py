@@ -316,11 +316,15 @@ if __name__ == '__main__':
     N = args.N
     rolls = []
     if ALG != 7:
+        start1 = time()
         input_file = open(args.i,'r')
         strands = input_file.readlines()[1::4]
         input_file.close()
+        end1 = time()
+        start2 = time()
         sorted_strands = SortedSet(strands)
         rolls = [sorted_strands.index(s) for s in strands]
+        end2 = time()
 
     start = time()
     extracted_bits = extract_bits(rolls)
@@ -330,6 +334,9 @@ if __name__ == '__main__':
         output_file = open(args.o,'w')
         output_file.write(extracted_bits)
         output_file.close()
-        print('No. Sequences:', len(strands))
-        print('No. Bits Extracted:', len(extracted_bits))
-        print('Time Elapsed:', str(end-start)+' s')
+        print('Number of DNA/RNA Sequences: ', len(strands))
+        print('Number of Bits Extracted: ', len(extracted_bits))
+        print('Time taken to read DNA/RNA Sequences: ', str(end1-start1)+'s')
+        print('Time taken to create dice rolls: ', str(end2-start2)+'s')
+        print('Time taken to generate bits: ', str(end-start)+'s')
+    print("Fin")
