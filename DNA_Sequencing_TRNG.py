@@ -333,6 +333,3 @@ if __name__ == '__main__':
         print('No. Sequences:', len(strands))
         print('No. Bits Extracted:', len(extracted_bits))
         print('Time Elapsed:', str(end-start)+' s')
-    
-    
-    

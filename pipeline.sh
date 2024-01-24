@@ -1,15 +1,13 @@
 #!/bin/sh
 set -x
 
-# ORDERING is the sequencing order that you want to use to generate the random bitstream
-# By default, we provide the order in which we received reads in our wetlab experiment.
-ORDERING='./data/read_order_alice.txt'
+# INPUT_FILE is the fastq file of the sequencing run that we wish to generate random numbers from
+# By default, we provide the INPUT_FILE illumina1.fastq from our wetlab experiment.
+INPUT_FILE = 'SRR8073713.fastq'
+OUTPUT_FILE = 'ExtractedBits.txt' # Name of the output file
+BLOCK_SIZE = 10000 # Block Size for Blockwise Juels/Jakobsson
+ALOGRITHM = 0 # Generation algorithm 0-6, 7 is for evaluation
 
-# SIDES is the number of faces of the dice.
-SIDES='13'
 
-# We first generate a random bitstream from the sequencing order
-python3 ./bitstream_generation/bitstream_from_ordering.py --i $ORDERING --o ./peres_debiasing/to_be_debiased.txt --s $SIDES
-
-# We use Peres debiasing to debias the generated bitstream
-python3 ./peres_debiasing/peres.py --i ./peres_debiasing/to_be_debiased.txt --o ./data/random_bitstream.txt --s $SIDES
+# We generate a random bitstream from the fastq file
+python3 DNA_Sequencing_TRNG.py --i $INPUT_FILE --o ./data/$OUTPUT_FILE --ALG $ALOGRITHM --b $BLOCK_SIZE
