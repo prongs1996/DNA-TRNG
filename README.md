@@ -14,7 +14,7 @@ To try out DNA-TRNG, clone this repository to a directory of your choice with th
 $ git clone https://github.com/prongs1996/DNA-TRNG.git
 ```
 
-To generate a random bitstream, you need to provide the read order/sequencing order of any read operation performed during a DNA-based data storage experiment. A sample ordering from our wetlab experiments [[1]](#1) is provided in the *data* directory.
+To generate a random bitstream, you need to provide the fastq file of any DNA sequencing run. A sample fastq file from our wetlab experiments [[1]](#1) is provided in the *data* directory.
 
 The code to generate a random bitstream from the sequencing order is provided in the *bistream_generation* directory and our implementation of the Peres debiaser [[2]](#2) is provided in the *peres_debiasing* directory.
 
