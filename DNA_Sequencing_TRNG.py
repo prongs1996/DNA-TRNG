@@ -113,15 +113,20 @@ def nCrExtractor(all_rolls):
 
 ### Shrinking Window Algorithms
 def ShrinkingWindow(all_rolls):
-    unique = set(all_rolls)
+    unique = set()
+    removed = set()
     rolls = []
+    start = time()
+    for r in all_rolls:
+        if r not in unique and r not in removed:
+            unique.add(r)
+        elif r in unique:
+            unique.remove(r)
+            removed.add(r)
     for r in all_rolls:
         if r in unique:
             rolls.append(r)
-            unique.remove(r)
-        elif r in rolls:
-            rolls.remove(r)
-        
+    print('Removed duplicates, time elapsed:', str(time()-start)+'s')
     sl = SortedList(rolls)
     count = len(rolls)
     all_bits = []
