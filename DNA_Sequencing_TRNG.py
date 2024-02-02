@@ -73,6 +73,7 @@ def BlockwiseJakobsson(all_rolls):
 # Q1 considers all indexes of a specific roll and generates
 # a single unbiased roll from a P-sided die where P is the
 # total number of ways to choose the indexes of the roll
+'''
 def nCr_Q1(indexes, n):
 	R = 0
 	o = 0
@@ -84,7 +85,26 @@ def nCr_Q1(indexes, n):
 		o = i+1
 		#print(R,n,d,o)
 	return R
-
+'''
+#new rank
+def nCr_Q1(indexes, n):
+    k = len(indexes)
+    c = comb(n,k)
+    r = 0
+    curr_index = 0
+    for i in reversed(indexes):
+        for j in range(curr_index, i):
+            c0 = (c*(n-k)) // n
+            c = c0
+            n -= 1
+        c0 = (c * (n - k))//n
+        c1 = (c * k) // n
+        r += c0
+        c = c1
+        k -= 1
+        n -= 1
+        curr_index = i+1
+    return r
 # Q2 produces an unbiased bitstream from a
 # single roll R of an unbiased S-sided die
 # (exactly the same as Jakob_Q2)
