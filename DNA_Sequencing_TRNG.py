@@ -3,7 +3,9 @@ from sortedcontainers import *
 from math import *
 from tqdm import tqdm
 from time import *
+import numpy as np
 import argparse
+from multiprocessing import Pool
 
 ### Jakobsson/Juels Algorithms
 # Q1 considers the entire sequence of rolls and generates
@@ -54,11 +56,12 @@ def Jakob_Q2(R,S):
 
 def Jakobsson(rolls):
     if len(rolls) > 10000:
+        print('\tToo many rolls, aborting.')
         return ''
     R,S = Jakob_Q1(rolls)
     return Jakob_Q2(R,S)
 
-def BlockwiseJakobsson(all_rolls, b):
+def BlockwiseJakobsson(all_rolls):
     bits_extracted = []
     for i in range(len(all_rolls)//b):
         rolls = all_rolls[i*b:(i+1)*b]
@@ -74,7 +77,7 @@ def nCr_Q1(indexes, n):
 	R = 0
 	o = 0
 	d = len(indexes)
-	for i in indexes:
+	for i in reversed(indexes):
 		R += comb(n-(i-o)-1, d)
 		n = n-(i-o)-1
 		d = d-1
@@ -95,28 +98,81 @@ def nCr_Q2(R,S):
     return ''
 
 def nCrExtractor(all_rolls):
-    rolls = all_rolls
-    sorted_ordering = SortedSet(rolls)
+    sorted_ordering = SortedSet(all_rolls)
     all_bits = []
-    while rolls:
-        read = sorted_ordering[0]
-        indexes = []
-        for i in range(len(rolls)):
-            if rolls[i] == read:
-                    indexes.append(i)
-        roll = nCr_Q1(indexes, len(rolls))
-        all_bits.append(nCr_Q2(roll, comb(len(rolls), len(indexes))))
-        while read in rolls:
-            rolls.remove(read)
-        sorted_ordering.discard(read)
+    all_indexes = {}
+    deleted = SortedSet()
+    remaining_rolls = len(all_rolls)
+    for i in range(len(all_rolls)):
+        if all_rolls[i] in all_indexes:
+            all_indexes[all_rolls[i]].append(i)
+        else:
+            all_indexes[all_rolls[i]] = [i]
+    
+    for r in tqdm(sorted_ordering):
+        unupdated_indexes = all_indexes[r]
+        updated_indexes = []
+        for i in reversed(unupdated_indexes):
+            deleted.add(i)
+            offset = deleted.index(i)
+            updated_indexes.append(i-offset)
+        #updated_indexes.reverse()
+        if len(updated_indexes) == 1:
+            all_bits.append(nCr_Q2(updated_indexes[0],remaining_rolls))
+        else:
+            #s1=time()
+            roll = nCr_Q1(updated_indexes, remaining_rolls)
+            #s2=time()
+            all_bits.append(nCr_Q2(roll, comb(remaining_rolls, len(updated_indexes))))
+            #s3=time()
+            #print(len(updated_indexes), s2-s1,s3-s2)
+        remaining_rolls -= len(updated_indexes)
     return ''.join(all_bits)
+'''
+def nCrExtractor(all_rolls):
+    sorted_ordering = SortedSet(all_rolls)
+    all_bits = []
+    all_indexes = {}
+    deleted = SortedSet()
+    remaining_rolls = len(all_rolls)
+    s1 = time()
+    for i in range(len(all_rolls)):
+        if all_rolls[i] in all_indexes:
+            all_indexes[all_rolls[i]].append(i)
+        else:
+            all_indexes[all_rolls[i]] = [i]
+    s2 = time()
+    print("First pass of indexes:",str(s2-s1)+'s')
+    
+    
+    for r in tqdm(sorted_ordering):
+        unupdated_indexes = all_indexes[r]
+        updated_indexes = []
+        for i in reversed(unupdated_indexes):
+            deleted.add(i)
+            offset = deleted.index(i)
+            updated_indexes.append(i-offset)        
 
+        print("Number of '1's:", len(updated_indexes))
+        s3 = time()
+        if len(updated_indexes) == 1:
+            bits = nCr_Q2(updated_indexes[0], remaining_rolls)
+        else:
+            bitstream = np.zeros([remaining_rolls])
+            for i in updated_indexes:
+                bitstream[i] = 1
+            bits = ''.join(PeresDebiaser(bitstream))
+        all_bits.append(bits)
+        remaining_rolls -= len(updated_indexes)
+        s4 = time()
+        print("Getting bits:",str(s4-s3)+'s')
+    return ''.join(all_bits)
+'''
 ### Shrinking Window Algorithms
 def ShrinkingWindow(all_rolls):
     unique = set()
     removed = set()
     rolls = []
-    start = time()
     for r in all_rolls:
         if r not in unique and r not in removed:
             unique.add(r)
@@ -126,7 +182,6 @@ def ShrinkingWindow(all_rolls):
     for r in all_rolls:
         if r in unique:
             rolls.append(r)
-    print('Removed duplicates, time elapsed:', str(time()-start)+'s')
     sl = SortedList(rolls)
     count = len(rolls)
     all_bits = []
@@ -242,7 +297,7 @@ def extract_bits(rolls):
     if ALG == 0:
         return Jakobsson(rolls)
     elif ALG == 1:
-        return BlockwiseJakobsson(rolls, b)
+        return BlockwiseJakobsson(rolls)
     elif ALG == 2:
         return nCrExtractor(rolls)
     elif ALG == 3:
@@ -254,61 +309,17 @@ def extract_bits(rolls):
     elif ALG == 6:
         return ColumnwiseVNC(rolls)
     else:
-        probabilities = [1/(S-2)]*S
-        probabilities[0] = 49.5
-        probabilities[-1] = 49.5
-        rolls = random.choices(list(range(S)),weights=probabilities,k=N)
-        
-        print(str(S)+'-sided die with probabilities:', probabilities)
-        print('No. Rolls:', N)
-        print('\n')
-        rolls_copy = list(rolls)
-        start = time()
-        print('Jakobsson/Juels')
-        print('\tBits Extracted:', len(Jakobsson(rolls_copy)))
-        print('\tTime Elapsed:', str(time()-start)+'s')
-
-        rolls_copy = list(rolls)
-        start = time()
-        print('Blockwise Jakobsson/Juels')
-        print('\tBits Extracted:', len(BlockwiseJakobsson(rolls_copy, b)))
-        print('\tTime Elapsed:', str(time()-start)+'s')
-
-        rolls_copy = list(rolls)
-        start = time()
-        print('nCr Extractor')
-        print('\tBits Extracted:', len(nCrExtractor(rolls_copy)))
-        print('\tTime Elapsed:', str(time()-start)+'s')
-
-        rolls_copy = list(rolls)
-        start = time()
-        print('Shrinking Window')
-        print('\tBits Extracted:', len(ShrinkingWindow(rolls_copy)))
-        print('\tTime Elapsed:', str(time()-start)+'s')
-
-        rolls_copy = list(rolls)
-        start = time()
-        print('Halfbit')
-        print('\tBits Extracted:', len(Halfbit(rolls_copy)))
-        print('\tTime Elapsed:', str(time()-start)+'s')
-
-        rolls_copy = list(rolls)
-        start = time()
-        print('Column-wise Peres')
-        print('\tBits Extracted:', len(ColumnwisePeres(rolls_copy)))
-        print('\tTime Elapsed:', str(time()-start)+'s')
-        
-        rolls_copy = list(rolls)
-        start = time()
-        print('Column-wise VNC')
-        print('\tBits Extracted:', len(ColumnwiseVNC(rolls_copy)))
-        print('\tTime Elapsed:', str(time()-start)+'s')
-        return ''
+        for i in range(len(algos)):
+            rolls_copy = list(rolls)
+            start = time()
+            print(names[i])
+            print('\tBits Extracted:', len(algos[i](rolls_copy)))
+            print('\tTime Elapsed:', str(time()-start)+'s')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DNA Sequencing TRNG')
-    parser.add_argument('--i', type=str, help='Input File (.fastq)')
+    parser.add_argument('--i', type=str, default='', help='Input File (.fastq)')
     parser.add_argument('--o', type=str, default='ExtractedBits.txt', help='Output File')
     parser.add_argument('--b', type=int, default=10000, help='Block Size (for Blockwise Jakobsson, ALG=1)')
     parser.add_argument('--S', type=int, default=16, help='No. sides of die (for comparing algorithms, ALG=7)')
@@ -320,17 +331,31 @@ if __name__ == '__main__':
     S = args.S
     N = args.N
     rolls = []
-    if ALG != 7:
-        start1 = time()
+    names = ['Jakobsson/Juels', 'Blockwise Jakobsson/Juels', 'nCr Extractor', 'Shrinking Window', 'Halfbit', 'Column-wise Peres', 'Column-wise VNC', 'Comparing all Algorithms']
+    algos = [Jakobsson, BlockwiseJakobsson, nCrExtractor, ShrinkingWindow, Halfbit, ColumnwisePeres, ColumnwiseVNC]
+    print(names[ALG])
+    if args.i == '':
+        start_create_rolls = time()
+        #Fair die
+        probabilities = [1] * S
+        rolls = random.choices(list(range(S)),weights=probabilities,k=N)    
+        print('\tFair '+str(S)+'-Sided Die')
+        print('\tNo. Rolls:', N)
+        print('')
+        end_create_rolls = time()
+    else:
+        start_read_file = time()
         input_file = open(args.i,'r')
         strands = input_file.readlines()[1::4]
         input_file.close()
-        end1 = time()
-        start2 = time()
+        end_read_file = time()
+        print('\tTime taken to read DNA/RNA Sequences: ', str(end_read_file-start_read_file)+'s')
+        start_create_rolls = time()
         sorted_strands = SortedSet(strands)
         rolls = [sorted_strands.index(s) for s in strands]
-        end2 = time()
-
+        end_create_rolls = time()
+    print('\tTime taken to create dice rolls: ', str(end_create_rolls-start_create_rolls)+'s')
+    
     start = time()
     extracted_bits = extract_bits(rolls)
     end = time()
@@ -339,9 +364,7 @@ if __name__ == '__main__':
         output_file = open(args.o,'w')
         output_file.write(extracted_bits)
         output_file.close()
-        print('Number of DNA/RNA Sequences: ', len(strands))
-        print('Number of Bits Extracted: ', len(extracted_bits))
-        print('Time taken to read DNA/RNA Sequences: ', str(end1-start1)+'s')
-        print('Time taken to create dice rolls: ', str(end2-start2)+'s')
-        print('Time taken to generate bits: ', str(end-start)+'s')
+        print('\tNumber of DNA/RNA Sequences: ', len(rolls))
+        print('\tNumber of Bits Extracted: ', len(extracted_bits))    
+        print('\tTime taken to generate bits: ', str(end-start)+'s')
     print("Fin")
